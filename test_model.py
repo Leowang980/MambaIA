@@ -18,17 +18,18 @@ DEFAULT_QUESTIONS = [
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Simple streaming test script for Qwen/Qwen-LoRA models")
+    parser = argparse.ArgumentParser(description="Simple streaming test script for Qwen/PEFT models")
     parser.add_argument(
         "--model_type",
         type=str,
-        choices=["qwen", "base", "lora", "custom"],
-        default="lora",
+        choices=["qwen", "base", "peft", "custom"],
+        default="peft",
         help="Which model preset to use.",
     )
     parser.add_argument("--qwen_model", type=str, default="Qwen/Qwen3-0.6B")
     parser.add_argument("--base_model", type=str, default="Qwen/Qwen3-0.6B-Base")
-    parser.add_argument("--lora_path", type=str, default="./outputs/qwen3-0.6b-gsm8k-lora")
+    parser.add_argument("--adapter_path", type=str, default="./outputs/qwen3-0.6b-gsm8k-peft")
+    parser.add_argument("--lora_path", type=str, default="", help="Deprecated alias of --adapter_path")
     parser.add_argument("--custom_model", type=str, default="")
     parser.add_argument("--max_new_tokens", type=int, default=256)
     parser.add_argument("--temperature", type=float, default=0.7)
@@ -70,6 +71,8 @@ def build_prompt(question: str) -> str:
 
 
 def load_model_and_tokenizer(args: argparse.Namespace):
+    if args.lora_path:
+        args.adapter_path = args.lora_path
     if args.device == "cuda" and not torch.cuda.is_available():
         print("CUDA not available, fallback to CPU.")
         runtime_device = torch.device("cpu")
@@ -90,9 +93,9 @@ def load_model_and_tokenizer(args: argparse.Namespace):
         device_map=None,
     ).to(runtime_device)
 
-    if args.model_type == "lora":
-        print(f"Loading LoRA adapter from: {args.lora_path}")
-        model = PeftModel.from_pretrained(model, args.lora_path).to(runtime_device)
+    if args.model_type == "peft":
+        print(f"Loading PEFT adapter from: {args.adapter_path}")
+        model = PeftModel.from_pretrained(model, args.adapter_path).to(runtime_device)
 
     model.eval()
     return model, tokenizer

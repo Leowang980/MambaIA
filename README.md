@@ -1,6 +1,11 @@
-# Qwen3-0.6B LoRA Fine-tuning (PEFT + Transformers)
+# Qwen3-0.6B PEFT Fine-tuning (Transformers)
 
-This project fine-tunes `Qwen/Qwen3-0.6B-Base` with LoRA using `PEFT + Transformers`.
+This project fine-tunes `Qwen/Qwen3-0.6B-Base` with PEFT using `Transformers`.
+Supported adapter methods:
+- LoRA
+- Prompt Tuning
+- Prefix Tuning
+- IA3
 
 ## Benchmark Choice
 
@@ -18,9 +23,10 @@ pip install -r requirements.txt
 ## Training
 
 ```bash
-python train_lora_gsm8k.py \
+python train_peft_gsm8k.py \
   --model_name_or_path Qwen/Qwen3-0.6B-Base \
-  --output_dir ./outputs/qwen3-0.6b-gsm8k-lora \
+  --output_dir ./outputs/qwen3-0.6b-gsm8k-peft \
+  --adapter_type lora \
   --train_samples 2000 \
   --eval_samples 200 \
   --num_train_epochs 2 \
@@ -28,17 +34,49 @@ python train_lora_gsm8k.py \
   --gradient_accumulation_steps 8
 ```
 
+### Prompt Tuning
+
+```bash
+python train_peft_gsm8k.py \
+  --adapter_type prompt_tuning \
+  --num_virtual_tokens 32 \
+  --prompt_tuning_init RANDOM
+```
+
+### Prefix Tuning
+
+```bash
+python train_peft_gsm8k.py \
+  --adapter_type prefix_tuning \
+  --num_virtual_tokens 32 \
+  --prefix_projection true
+```
+
+### IA3
+
+```bash
+python train_peft_gsm8k.py \
+  --adapter_type ia3 \
+  --ia3_target_modules k_proj,v_proj,down_proj \
+  --ia3_feedforward_modules down_proj
+```
+
+> `train_lora_gsm8k.py` is kept as a backward-compatible entry and now forwards to `train_peft_gsm8k.py`.
+
 ## Main Script Arguments
 
 - `--train_samples`: Number of training samples (default: 2000)
 - `--eval_samples`: Number of evaluation samples (default: 200)
 - `--max_length`: Maximum sequence length (default: 1024)
-- `--lora_r`: LoRA rank (default: 16)
-- `--lora_alpha`: LoRA alpha (default: 32)
-- `--lora_dropout`: LoRA dropout (default: 0.05)
+- `--adapter_type`: `lora | prompt_tuning | prefix_tuning | ia3`
+- `--lora_r`, `--lora_alpha`, `--lora_dropout`: LoRA params
+- `--num_virtual_tokens`: Prompt/Prefix virtual tokens
+- `--prompt_tuning_init`, `--prompt_tuning_init_text`: Prompt Tuning params
+- `--prefix_projection`: Prefix Tuning projection switch
+- `--ia3_target_modules`, `--ia3_feedforward_modules`: IA3 target modules
 
 ## Outputs
 
 After training, `--output_dir` will contain:
-- LoRA adapter weights
+- PEFT adapter weights
 - Tokenizer files

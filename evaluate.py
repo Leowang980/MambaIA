@@ -18,13 +18,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model_type",
         type=str,
-        choices=["qwen", "base", "lora"],
-        default="lora",
-        help="qwen=Qwen3-0.6B, base=Qwen3-0.6B-Base, lora=Base+LoRA",
+        choices=["qwen", "base", "peft"],
+        default="peft",
+        help="qwen=Qwen3-0.6B, base=Qwen3-0.6B-Base, peft=Base+PEFT adapter",
     )
     parser.add_argument("--qwen_model", type=str, default="Qwen/Qwen3-0.6B")
     parser.add_argument("--base_model", type=str, default="Qwen/Qwen3-0.6B-Base")
-    parser.add_argument("--lora_path", type=str, default="./outputs/qwen3-0.6b-gsm8k-lora")
+    parser.add_argument(
+        "--adapter_path",
+        type=str,
+        default="/root/autodl-tmp/MambaIA/outputs/qwen3-0.6b-template-gsm8k-peft",
+        help="Path to trained PEFT adapter (LoRA/Prompt/Prefix/IA3).",
+    )
+    # Backward compatibility: keep old argument name.
+    parser.add_argument(
+        "--lora_path",
+        type=str,
+        default="",
+        help="Deprecated alias of --adapter_path.",
+    )
     parser.add_argument("--dataset_name", type=str, default="openai/gsm8k")
     parser.add_argument("--dataset_config", type=str, default="main")
     parser.add_argument("--split", type=str, default="test")
@@ -41,9 +53,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_prompt(question: str, model_type: str, tokenizer: AutoTokenizer) -> str:
-    if model_type in ("base", "lora"):
+    if model_type in ("base", "peft"):
         bos = tokenizer.bos_token or ""
-        return f"{bos}{question}\n\n"
+        return (
+            f"{bos}Question: {question}\n"
+            f"Answer: Let's think step by step.\n"
+        )
     return (
         f"<|im_start|>system\n{SYSTEM_PROMPT}<|im_end|>\n"
         f"<|im_start|>user\n{question}<|im_end|>\n"
@@ -193,18 +208,20 @@ def load_model(model_name_or_path: str, device: torch.device) -> AutoModelForCau
     return model.to(device)
 
 
-def load_lora_model(
+def load_peft_model(
     base_model_name: str,
-    lora_path: str,
+    adapter_path: str,
     device: torch.device,
 ) -> AutoModelForCausalLM:
-    base_for_lora = load_model(base_model_name, device=device)
-    lora_model = PeftModel.from_pretrained(base_for_lora, lora_path)
-    return lora_model.to(device)
+    base_for_adapter = load_model(base_model_name, device=device)
+    peft_model = PeftModel.from_pretrained(base_for_adapter, adapter_path)
+    return peft_model.to(device)
 
 
 def main() -> None:
     args = parse_args()
+    if args.lora_path:
+        args.adapter_path = args.lora_path
     torch.manual_seed(args.seed)
     if args.device == "cuda" and not torch.cuda.is_available():
         print("CUDA is not available, fallback to CPU.")
@@ -229,10 +246,10 @@ def main() -> None:
         model = load_model(args.base_model, device=runtime_device)
         model_path = args.base_model
     else:
-        print(f"Loading base: {args.base_model}, LoRA: {args.lora_path}")
+        print(f"Loading base: {args.base_model}, adapter: {args.adapter_path}")
         tokenizer = ensure_tokenizer(args.base_model)
-        model = load_lora_model(args.base_model, args.lora_path, device=runtime_device)
-        model_path = args.lora_path
+        model = load_peft_model(args.base_model, args.adapter_path, device=runtime_device)
+        model_path = args.adapter_path
 
     report_meta = {
         "model_type": args.model_type,
@@ -244,7 +261,11 @@ def main() -> None:
     }
 
     print("Evaluating...")
-    output_json = os.path.join(args.output_dir, f"eval_gsm8k_{args.model_type}.json")
+    if args.model_type == "peft":
+        adapter_name = os.path.basename(args.adapter_path.rstrip("/")) or "eval_gsm8k_peft"
+        output_json = os.path.join(args.output_dir, f"{adapter_name}.json")
+    else:
+        output_json = os.path.join(args.output_dir, f"eval_gsm8k_{args.model_type}.json")
     eval_result = evaluate_model(
         model,
         tokenizer,
