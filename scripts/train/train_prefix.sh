@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
-# Prompt tuning on GSM8K (virtual tokens prepended; uses tokenizer for TEXT init).
+# Prefix tuning on GSM8K (trainable prefix vectors per layer).
 set -euo pipefail
 
 export HF_HOME=/root/autodl-tmp/MambaIA/data
 export HF_ENDPOINT=https://hf-mirror.com
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT}"
 
 MODEL_NAME_OR_PATH="${MODEL_NAME_OR_PATH:-Qwen/Qwen3-0.6B-Base}"
-OUTPUT_DIR="${OUTPUT_DIR:-./outputs/qwen3-0.6b-gsm8k-prompt}"
+OUTPUT_DIR="${OUTPUT_DIR:-./outputs/qwen3-0.6b-gsm8k-prefix}"
+
+# PREFIX_PROJECTION: true|false (train_peft_gsm8k.py uses parse_bool)
+PREFIX_PROJECTION="${PREFIX_PROJECTION:-false}"
 
 python3 train_peft_gsm8k.py \
     --model_name_or_path "${MODEL_NAME_OR_PATH}" \
     --output_dir "${OUTPUT_DIR}" \
-    --adapter_type prompt_tuning \
+    --adapter_type prefix_tuning \
     --num_virtual_tokens "${NUM_VIRTUAL_TOKENS:-20}" \
-    --prompt_tuning_init "${PROMPT_TUNING_INIT:-RANDOM}" \
-    --prompt_tuning_init_text "${PROMPT_TUNING_INIT_TEXT:-Solve the problem carefully.}" \
+    --prefix_projection "${PREFIX_PROJECTION}" \
     --train_samples "${TRAIN_SAMPLES:--1}" \
     --eval_samples "${EVAL_SAMPLES:-500}" \
     --num_train_epochs "${NUM_TRAIN_EPOCHS:-3}" \

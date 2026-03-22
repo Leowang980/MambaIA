@@ -7,7 +7,7 @@ export HF_HOME=/root/autodl-tmp/MambaIA/data
 export HF_ENDPOINT=https://hf-mirror.com
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT}"
 
 
