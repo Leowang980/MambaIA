@@ -20,8 +20,8 @@ def build_peft_config(
     adapter_type = cfg.adapter_type.lower()
     if adapter_type == "adapter":
         raise ValueError(
-            "adapter (bottleneck) 使用 apply_peft_model 注入，无需 build_peft_config；"
-            "请直接调用 apply_peft_model(model, cfg, ...)。"
+            "adapter (bottleneck) is injected via apply_peft_model; build_peft_config does not apply. "
+            "Use apply_peft_model(model, cfg, ...) instead."
         )
     if adapter_type == "lora":
         return build_lora_config(cfg)

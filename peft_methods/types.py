@@ -41,7 +41,7 @@ class AdapterBuildConfig:
     )
     ia3_feedforward_modules: List[str] = field(default_factory=lambda: ["down_proj"])
 
-    # Bottleneck Adapter (Houlsby-style, 非 HuggingFace PEFT 内置)
+    # Bottleneck adapter (Houlsby-style; not built into Hugging Face PEFT)
     adapter_target_modules: List[str] = field(
         default_factory=lambda: [
             "q_proj",

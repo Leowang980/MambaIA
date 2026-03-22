@@ -11,11 +11,11 @@ from peft_methods.bottleneck_adapter import is_bottleneck_adapter_checkpoint, lo
 
 SYSTEM_PROMPT = "You are a helpful assistant. Please answer clearly and briefly."
 DEFAULT_QUESTIONS = [
-    "1+1 等于多少？请只给结果。",
-    "如果小明有 10 个苹果，吃掉 3 个，还剩多少个？",
-    "请用一句话解释什么是机器学习。",
-    "把这句话翻译成英文：今天天气很好。",
-    "如果 x + 3 = 10，那么 x 等于多少？",
+    "What is 1+1? Reply with only the result.",
+    "If Alice has 10 apples and eats 3, how many are left?",
+    "Explain machine learning in one sentence.",
+    "Translate to English: The weather is nice today.",
+    "If x + 3 = 10, what is x?",
 ]
 
 
@@ -165,15 +165,15 @@ def run_fixed_questions(args: argparse.Namespace, model, tokenizer) -> None:
 
 
 def run_interactive(args: argparse.Namespace, model, tokenizer) -> None:
-    print("\n进入交互模式，输入 exit 或 quit 结束。")
+    print("\nInteractive mode. Type exit or quit to stop.")
     while True:
-        user_q = input("\n你: ").strip()
+        user_q = input("\nYou: ").strip()
         if user_q.lower() in {"exit", "quit"}:
-            print("已退出交互模式。")
+            print("Exiting interactive mode.")
             break
         if not user_q:
             continue
-        print("模型: ", end="", flush=True)
+        print("Assistant: ", end="", flush=True)
         _ = stream_generate_answer(
             model=model,
             tokenizer=tokenizer,

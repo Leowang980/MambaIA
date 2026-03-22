@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prompt tuning on GSM8K (virtual tokens prepended; uses tokenizer for TEXT init).
+# Prompt tuning on GSM8K (only soft prefix is trained). For 0.6B base, avoid RANDOM + tiny tokens + 2e-5 LR (often garbage/empty).
 set -euo pipefail
 
 export HF_HOME=/root/autodl-tmp/MambaIA/data
@@ -12,20 +12,26 @@ cd "${ROOT}"
 MODEL_NAME_OR_PATH="${MODEL_NAME_OR_PATH:-Qwen/Qwen3-0.6B-Base}"
 OUTPUT_DIR="${OUTPUT_DIR:-./outputs/qwen3-0.6b-gsm8k-prompt}"
 
+# Defaults: TEXT init, more virtual tokens, higher LR (only prompt params train; often 1e-4 to 1e-3)
+NUM_VIRTUAL_TOKENS="${NUM_VIRTUAL_TOKENS:-48}"
+PROMPT_TUNING_INIT="${PROMPT_TUNING_INIT:-TEXT}"
+PROMPT_TUNING_INIT_TEXT="${PROMPT_TUNING_INIT_TEXT:-Solve the math problem step by step.}"
+LEARNING_RATE="${LEARNING_RATE:-3e-4}"
+
 python3 train_peft_gsm8k.py \
     --model_name_or_path "${MODEL_NAME_OR_PATH}" \
     --output_dir "${OUTPUT_DIR}" \
     --adapter_type prompt_tuning \
-    --num_virtual_tokens "${NUM_VIRTUAL_TOKENS:-20}" \
-    --prompt_tuning_init "${PROMPT_TUNING_INIT:-RANDOM}" \
-    --prompt_tuning_init_text "${PROMPT_TUNING_INIT_TEXT:-Solve the problem carefully.}" \
+    --num_virtual_tokens "${NUM_VIRTUAL_TOKENS}" \
+    --prompt_tuning_init "${PROMPT_TUNING_INIT}" \
+    --prompt_tuning_init_text "${PROMPT_TUNING_INIT_TEXT}" \
     --train_samples "${TRAIN_SAMPLES:--1}" \
     --eval_samples "${EVAL_SAMPLES:-500}" \
     --num_train_epochs "${NUM_TRAIN_EPOCHS:-3}" \
     --train_batch_size "${TRAIN_BATCH_SIZE:-8}" \
     --eval_batch_size "${EVAL_BATCH_SIZE:-8}" \
     --gradient_accumulation_steps "${GRADIENT_ACCUMULATION_STEPS:-8}" \
-    --learning_rate "${LEARNING_RATE:-2e-5}" \
+    --learning_rate "${LEARNING_RATE}" \
     --logging_steps "${LOGGING_STEPS:-10}" \
     --eval_steps "${EVAL_STEPS:-100}" \
     --save_steps "${SAVE_STEPS:-100}" \

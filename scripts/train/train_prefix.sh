@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prefix tuning on GSM8K (trainable prefix vectors per layer).
+# Prefix tuning on GSM8K. Training disables gradient_checkpointing and uses eager attention on Qwen3 (avoids SDPA shape errors).
 set -euo pipefail
 
 export HF_HOME=/root/autodl-tmp/MambaIA/data

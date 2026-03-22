@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GSM8K 评测：Base + Bottleneck Adapter（默认路径与 train_ada 一致；evaluate 会识别 bottleneck_adapter_config.json）。
+# GSM8K eval: base + bottleneck adapter; default path matches train_ada.sh (evaluate.py detects bottleneck_adapter_config.json).
 set -euo pipefail
 
 export HF_HOME="${HF_HOME:-/root/autodl-tmp/MambaIA/data}"

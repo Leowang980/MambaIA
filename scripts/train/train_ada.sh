@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bottleneck Adapter PEFT（经典 Adapter：并联 down→act→up，非 LoRA / 非动态路由）。
+# Bottleneck Adapter PEFT (classic parallel down->act->up; not LoRA / not dynamic routing).
 set -euo pipefail
 export HF_HOME=/root/autodl-tmp/MambaIA/data
 export HF_ENDPOINT=https://hf-mirror.com

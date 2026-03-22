@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GSM8K 评测：仅 Base 模型（无 PEFT），与 train 脚本使用的基座默认一致。
+# GSM8K eval: base model only (no PEFT); same default base as train scripts.
 set -euo pipefail
 
 export HF_HOME="${HF_HOME:-/root/autodl-tmp/MambaIA/data}"

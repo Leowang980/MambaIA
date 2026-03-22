@@ -6,7 +6,7 @@ Supported adapter methods:
 - Prompt Tuning
 - Prefix Tuning
 - IA3
-- Bottleneck Adapter（经典 Adapter PEFT，`--adapter_type adapter`，由本项目实现；HuggingFace PEFT 已不再内置）
+- Bottleneck Adapter (classic PEFT adapter via `--adapter_type adapter`, implemented in this repo; not shipped in Hugging Face PEFT anymore)
 
 ## Benchmark Choice
 
@@ -37,14 +37,20 @@ python train_peft_gsm8k.py \
 
 ### Prompt Tuning
 
+On small models, **RANDOM init + the same learning rate as LoRA (e.g. 2e-5)** often fails or yields garbage/empty generations. Prefer **TEXT init**, **more virtual tokens**, and **learning_rate around 1e-4 to 1e-3** (only soft prompts are trained). See `./scripts/train/train_prompt.sh`.
+
 ```bash
 python train_peft_gsm8k.py \
   --adapter_type prompt_tuning \
-  --num_virtual_tokens 32 \
-  --prompt_tuning_init RANDOM
+  --num_virtual_tokens 48 \
+  --prompt_tuning_init TEXT \
+  --prompt_tuning_init_text "Solve the math problem step by step." \
+  --learning_rate 3e-4
 ```
 
 ### Prefix Tuning
+
+On Qwen3, Prefix Tuning combined with **gradient checkpointing + SDPA** can trigger attention shape errors. This repo **disables gradient checkpointing** and uses **eager attention** for `prefix_tuning` (higher VRAM; reduce batch if needed).
 
 ```bash
 python train_peft_gsm8k.py \
@@ -62,9 +68,9 @@ python train_peft_gsm8k.py \
   --ia3_feedforward_modules down_proj
 ```
 
-### Bottleneck Adapter（经典 PEFT Adapter）
+### Bottleneck Adapter (classic PEFT adapter)
 
-权重保存在 `output_dir` 下的 `bottleneck_adapter_config.json` 与 `bottleneck_adapter.safetensors`（或 `.bin`）。`evaluate.py` / `test_model.py` 在 `--model_type peft` 时会自动识别该目录。
+Weights are saved under `output_dir` as `bottleneck_adapter_config.json` and `bottleneck_adapter.safetensors` (or `.bin`). `evaluate.py` / `test_model.py` with `--model_type peft` auto-detect this layout.
 
 ```bash
 python train_peft_gsm8k.py \
@@ -74,7 +80,7 @@ python train_peft_gsm8k.py \
   --adapter_non_linearity relu
 ```
 
-或使用 `./scripts/train_ada.sh`。
+Or use `./scripts/train/train_ada.sh`.
 
 > `train_lora_gsm8k.py` is kept as a backward-compatible entry and now forwards to `train_peft_gsm8k.py`.
 
@@ -89,7 +95,7 @@ python train_peft_gsm8k.py \
 - `--prompt_tuning_init`, `--prompt_tuning_init_text`: Prompt Tuning params
 - `--prefix_projection`: Prefix Tuning projection switch
 - `--ia3_target_modules`, `--ia3_feedforward_modules`: IA3 target modules
-- `--adapter_target_modules`, `--adapter_bottleneck_dim`, `--adapter_dropout`, `--adapter_non_linearity`: Bottleneck Adapter 参数
+- `--adapter_target_modules`, `--adapter_bottleneck_dim`, `--adapter_dropout`, `--adapter_non_linearity`: Bottleneck Adapter params
 
 ## Outputs
 

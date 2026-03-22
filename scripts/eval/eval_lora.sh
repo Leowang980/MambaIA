@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GSM8K 评测：Base + LoRA（或其它 HuggingFace PEFT）checkpoint，默认路径与 train_lora 一致。
+# GSM8K eval: base + LoRA (or other HF PEFT) checkpoint; default path matches train_lora.sh.
 set -euo pipefail
 
 export HF_HOME="${HF_HOME:-/root/autodl-tmp/MambaIA/data}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GSM8K 评测：Chat 版 Qwen（非 Base 格式 prompt），用于对比 instruct 模型。
+# GSM8K eval: chat-tuned Qwen (non-base prompt format); for comparing instruct models.
 set -euo pipefail
 
 export HF_HOME="${HF_HOME:-/root/autodl-tmp/MambaIA/data}"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GSM8K 评测：Base + Prefix tuning checkpoint（默认路径与 train_prefix 一致）。
+# GSM8K eval: base + prefix-tuning checkpoint; default path matches train_prefix.sh.
 set -euo pipefail
 
 export HF_HOME="${HF_HOME:-/root/autodl-tmp/MambaIA/data}"

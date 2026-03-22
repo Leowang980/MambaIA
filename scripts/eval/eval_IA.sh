@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GSM8K 评测：Base + IA3 checkpoint（默认路径与 train_IA 一致）。
+# GSM8K eval: base + IA3 checkpoint; default path matches train_IA.sh.
 set -euo pipefail
 
 export HF_HOME="${HF_HOME:-/root/autodl-tmp/MambaIA/data}"

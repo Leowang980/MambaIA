@@ -1,6 +1,6 @@
 """
-经典 Bottleneck Adapter（Houlsby et al. 风格）：在目标 Linear 上并联 down→act→up。
-当前 HuggingFace PEFT 已不再内置该类型，因此在项目内实现并与训练/评测脚本对接。
+Classic bottleneck adapter (Houlsby-style): parallel down->act->up branch on target Linear layers.
+Hugging Face PEFT no longer ships this tuner, so it is implemented here for train/eval scripts.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from .types import AdapterBuildConfig
 
 
 class LinearWithBottleneckAdapter(nn.Module):
-    """y = W x + Up(Act(Drop(Down(x))))，基座 Linear 冻结，仅训练 adapter 分支。"""
+    """y = W x + Up(Act(Drop(Down(x)))); base Linear frozen, only adapter branch is trained."""
 
     def __init__(
         self,

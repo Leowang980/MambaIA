@@ -45,17 +45,17 @@ class ScriptArgs:
     lora_dropout: float = 0.05
     lora_target_modules: str = "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj"
 
-    # Prompt / Prefix
-    num_virtual_tokens: int = 20
-    prompt_tuning_init: str = "RANDOM"  # RANDOM or TEXT
-    prompt_tuning_init_text: str = "Solve the problem carefully."
+    # Prompt / Prefix (prompt tuning on small models: prefer TEXT init and higher LR; see scripts/train/train_prompt.sh)
+    num_virtual_tokens: int = 32
+    prompt_tuning_init: str = "TEXT"  # RANDOM or TEXT
+    prompt_tuning_init_text: str = "Solve the math problem step by step."
     prefix_projection: bool = False
 
     # IA3
     ia3_target_modules: str = "k_proj,v_proj,down_proj"
     ia3_feedforward_modules: str = "down_proj"
 
-    # Bottleneck Adapter（经典 Adapter PEFT，非 LoRA）
+    # Bottleneck Adapter (classic PEFT adapter, not LoRA)
     adapter_target_modules: str = "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj"
     adapter_bottleneck_dim: int = 64
     adapter_dropout: float = 0.05
@@ -256,10 +256,18 @@ def main():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    from_pretrained_kw: dict = {
+        "torch_dtype": "auto",
+        "device_map": "auto",
+    }
+    # Prefix tuning injects prefixes via past_key_values; Qwen3 + SDPA + gradient checkpointing can
+    # mismatch attention dims (e.g. 448 vs 448+num_virtual_tokens). Eager attention + no GC avoids this.
+    if args.adapter_type == "prefix_tuning":
+        from_pretrained_kw["attn_implementation"] = "eager"
+
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name_or_path,
-        torch_dtype="auto",
-        device_map="auto",
+        **from_pretrained_kw,
     )
 
     adapter_cfg = to_adapter_build_config(args)
@@ -372,9 +380,19 @@ def main():
         if "dataloader_pin_memory" in ta_signature:
             ta_kwargs["dataloader_pin_memory"] = False
 
-    # Bottleneck Adapter 挂在完整模型上，Trainer.save_model 会写出全量权重；仅训练结束保存 adapter 权重。
+    # Bottleneck adapter wraps the full model; Trainer.save_model would save full weights; save adapters only at end.
     if args.adapter_type == "adapter":
         ta_kwargs["save_strategy"] = "no"
+
+    if args.adapter_type == "prefix_tuning":
+        ta_kwargs["gradient_checkpointing"] = False
+        if hasattr(model, "gradient_checkpointing_disable"):
+            model.gradient_checkpointing_disable()
+        print(
+            "prefix_tuning: gradient_checkpointing disabled (incompatible with Qwen3 prefix KV + checkpointing); "
+            "VRAM use increases — reduce batch size if needed.",
+            flush=True,
+        )
 
     training_args = TrainingArguments(**ta_kwargs)
 
