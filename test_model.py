@@ -6,6 +6,8 @@ import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 
+from peft_methods.bottleneck_adapter import is_bottleneck_adapter_checkpoint, load_bottleneck_adapter
+
 
 SYSTEM_PROMPT = "You are a helpful assistant. Please answer clearly and briefly."
 DEFAULT_QUESTIONS = [
@@ -95,7 +97,10 @@ def load_model_and_tokenizer(args: argparse.Namespace):
 
     if args.model_type == "peft":
         print(f"Loading PEFT adapter from: {args.adapter_path}")
-        model = PeftModel.from_pretrained(model, args.adapter_path).to(runtime_device)
+        if is_bottleneck_adapter_checkpoint(args.adapter_path):
+            model = load_bottleneck_adapter(model, args.adapter_path, device=runtime_device)
+        else:
+            model = PeftModel.from_pretrained(model, args.adapter_path).to(runtime_device)
 
     model.eval()
     return model, tokenizer

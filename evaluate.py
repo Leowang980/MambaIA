@@ -9,6 +9,8 @@ from datasets import load_dataset
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from peft_methods.bottleneck_adapter import is_bottleneck_adapter_checkpoint, load_bottleneck_adapter
+
 
 SYSTEM_PROMPT = "You are a helpful math tutor. Solve the problem step by step."
 
@@ -27,8 +29,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--adapter_path",
         type=str,
-        default="/root/autodl-tmp/MambaIA/outputs/qwen3-0.6b-template-gsm8k-peft",
-        help="Path to trained PEFT adapter (LoRA/Prompt/Prefix/IA3).",
+        default="/root/autodl-tmp/MambaIA/outputs/qwen3-0.6b-template-gsm8k-lora",
+        help="Path to trained PEFT adapter（LoRA/Prompt/Prefix/IA3）或 bottleneck_adapter 目录。",
     )
     # Backward compatibility: keep old argument name.
     parser.add_argument(
@@ -47,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/root/autodl-tmp/MambaIA/outputs/bench",
+        default="/root/autodl-tmp/MambaIA/outputs/bench/full",
     )
     return parser.parse_args()
 
@@ -214,6 +216,8 @@ def load_peft_model(
     device: torch.device,
 ) -> AutoModelForCausalLM:
     base_for_adapter = load_model(base_model_name, device=device)
+    if is_bottleneck_adapter_checkpoint(adapter_path):
+        return load_bottleneck_adapter(base_for_adapter, adapter_path, device=device)
     peft_model = PeftModel.from_pretrained(base_for_adapter, adapter_path)
     return peft_model.to(device)
 
@@ -232,7 +236,7 @@ def main() -> None:
 
     print("Loading dataset...")
     ds = load_dataset(args.dataset_name, args.dataset_config)[args.split]
-    num_samples = min(args.num_samples, len(ds))
+    num_samples = len(ds)
     samples = [ds[i] for i in range(num_samples)]
 
     if args.model_type == "qwen":

@@ -6,6 +6,7 @@ Supported adapter methods:
 - Prompt Tuning
 - Prefix Tuning
 - IA3
+- Bottleneck Adapter（经典 Adapter PEFT，`--adapter_type adapter`，由本项目实现；HuggingFace PEFT 已不再内置）
 
 ## Benchmark Choice
 
@@ -61,6 +62,20 @@ python train_peft_gsm8k.py \
   --ia3_feedforward_modules down_proj
 ```
 
+### Bottleneck Adapter（经典 PEFT Adapter）
+
+权重保存在 `output_dir` 下的 `bottleneck_adapter_config.json` 与 `bottleneck_adapter.safetensors`（或 `.bin`）。`evaluate.py` / `test_model.py` 在 `--model_type peft` 时会自动识别该目录。
+
+```bash
+python train_peft_gsm8k.py \
+  --adapter_type adapter \
+  --adapter_bottleneck_dim 64 \
+  --adapter_target_modules q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj \
+  --adapter_non_linearity relu
+```
+
+或使用 `./scripts/train_ada.sh`。
+
 > `train_lora_gsm8k.py` is kept as a backward-compatible entry and now forwards to `train_peft_gsm8k.py`.
 
 ## Main Script Arguments
@@ -68,12 +83,13 @@ python train_peft_gsm8k.py \
 - `--train_samples`: Number of training samples (default: 2000)
 - `--eval_samples`: Number of evaluation samples (default: 200)
 - `--max_length`: Maximum sequence length (default: 1024)
-- `--adapter_type`: `lora | prompt_tuning | prefix_tuning | ia3`
+- `--adapter_type`: `lora | prompt_tuning | prefix_tuning | ia3 | adapter`
 - `--lora_r`, `--lora_alpha`, `--lora_dropout`: LoRA params
 - `--num_virtual_tokens`: Prompt/Prefix virtual tokens
 - `--prompt_tuning_init`, `--prompt_tuning_init_text`: Prompt Tuning params
 - `--prefix_projection`: Prefix Tuning projection switch
 - `--ia3_target_modules`, `--ia3_feedforward_modules`: IA3 target modules
+- `--adapter_target_modules`, `--adapter_bottleneck_dim`, `--adapter_dropout`, `--adapter_non_linearity`: Bottleneck Adapter 参数
 
 ## Outputs
 

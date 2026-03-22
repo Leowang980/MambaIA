@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Literal
 
 
-AdapterType = Literal["lora", "prompt_tuning", "prefix_tuning", "ia3"]
+AdapterType = Literal["lora", "prompt_tuning", "prefix_tuning", "ia3", "adapter"]
 
 
 @dataclass
@@ -40,3 +40,19 @@ class AdapterBuildConfig:
         default_factory=lambda: ["k_proj", "v_proj", "down_proj"]
     )
     ia3_feedforward_modules: List[str] = field(default_factory=lambda: ["down_proj"])
+
+    # Bottleneck Adapter (Houlsby-style, 非 HuggingFace PEFT 内置)
+    adapter_target_modules: List[str] = field(
+        default_factory=lambda: [
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ]
+    )
+    adapter_bottleneck_dim: int = 64
+    adapter_dropout: float = 0.05
+    adapter_non_linearity: str = "relu"  # relu | gelu | silu

@@ -10,6 +10,7 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
 
 from peft_methods import AdapterBuildConfig, SUPPORTED_ADAPTER_TYPES, apply_peft_model
+from peft_methods.bottleneck_adapter import print_trainable_parameter_stats, save_bottleneck_adapter
 
 
 SYSTEM_PROMPT = "You are a helpful math tutor. Solve the problem step by step."
@@ -39,7 +40,7 @@ class ScriptArgs:
     adapter_type: str = "lora"
 
     # LoRA
-    lora_r: int = 16
+    lora_r: int = 8
     lora_alpha: int = 32
     lora_dropout: float = 0.05
     lora_target_modules: str = "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj"
@@ -53,6 +54,12 @@ class ScriptArgs:
     # IA3
     ia3_target_modules: str = "k_proj,v_proj,down_proj"
     ia3_feedforward_modules: str = "down_proj"
+
+    # Bottleneck Adapter（经典 Adapter PEFT，非 LoRA）
+    adapter_target_modules: str = "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj"
+    adapter_bottleneck_dim: int = 64
+    adapter_dropout: float = 0.05
+    adapter_non_linearity: str = "relu"
 
 
 def parse_bool(value: str) -> bool:
@@ -128,6 +135,24 @@ def parse_args() -> ScriptArgs:
         type=str,
         default=d.ia3_feedforward_modules,
     )
+
+    parser.add_argument(
+        "--adapter_target_modules",
+        type=str,
+        default=d.adapter_target_modules,
+    )
+    parser.add_argument(
+        "--adapter_bottleneck_dim",
+        type=int,
+        default=d.adapter_bottleneck_dim,
+    )
+    parser.add_argument("--adapter_dropout", type=float, default=d.adapter_dropout)
+    parser.add_argument(
+        "--adapter_non_linearity",
+        type=str,
+        choices=["relu", "gelu", "silu"],
+        default=d.adapter_non_linearity,
+    )
     return ScriptArgs(**vars(parser.parse_args()))
 
 
@@ -144,6 +169,10 @@ def to_adapter_build_config(args: ScriptArgs) -> AdapterBuildConfig:
         prefix_projection=args.prefix_projection,
         ia3_target_modules=parse_csv_list(args.ia3_target_modules),
         ia3_feedforward_modules=parse_csv_list(args.ia3_feedforward_modules),
+        adapter_target_modules=parse_csv_list(args.adapter_target_modules),
+        adapter_bottleneck_dim=args.adapter_bottleneck_dim,
+        adapter_dropout=args.adapter_dropout,
+        adapter_non_linearity=args.adapter_non_linearity,
     )
 
 
@@ -239,7 +268,10 @@ def main():
         adapter_cfg,
         tokenizer_name_or_path=args.model_name_or_path,
     )
-    model.print_trainable_parameters()
+    if hasattr(model, "print_trainable_parameters"):
+        model.print_trainable_parameters()
+    else:
+        print_trainable_parameter_stats(model)
 
     dataset = load_dataset(args.dataset_name, args.dataset_config)
     n_train = (
@@ -340,6 +372,10 @@ def main():
         if "dataloader_pin_memory" in ta_signature:
             ta_kwargs["dataloader_pin_memory"] = False
 
+    # Bottleneck Adapter 挂在完整模型上，Trainer.save_model 会写出全量权重；仅训练结束保存 adapter 权重。
+    if args.adapter_type == "adapter":
+        ta_kwargs["save_strategy"] = "no"
+
     training_args = TrainingArguments(**ta_kwargs)
 
     trainer = Trainer(
@@ -351,7 +387,15 @@ def main():
     )
 
     trainer.train()
-    trainer.save_model(args.output_dir)
+    if args.adapter_type == "adapter":
+        save_bottleneck_adapter(
+            model,
+            args.output_dir,
+            adapter_cfg,
+            args.model_name_or_path,
+        )
+    else:
+        trainer.save_model(args.output_dir)
     tokenizer.save_pretrained(args.output_dir)
 
 
