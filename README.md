@@ -50,7 +50,9 @@ python train_peft_gsm8k.py \
 
 ### Prefix Tuning
 
-On Qwen3, Prefix Tuning combined with **gradient checkpointing + SDPA** can trigger attention shape errors. This repo **disables gradient checkpointing** and uses **eager attention** for `prefix_tuning` (higher VRAM; reduce batch if needed).
+On Qwen3, Prefix Tuning combined with **gradient checkpointing + SDPA** can trigger attention shape errors. This repo **disables gradient checkpointing** and uses **eager attention** for `prefix_tuning` during training (higher VRAM; reduce batch if needed). **Evaluation** (`evaluate.py`, `test_model.py`) also loads the base model with **eager attention** when `adapter_config.json` says `PREFIX_TUNING`, so generation matches training.
+
+Only prefix parameters are trained: defaults in `scripts/train/train_prefix.sh` use a **higher learning rate** (e.g. `3e-4`) and **`prefix_projection=true`**; `2e-5` with few virtual tokens often underfits and yields garbage text at decode time.
 
 ```bash
 python train_peft_gsm8k.py \
@@ -61,12 +63,16 @@ python train_peft_gsm8k.py \
 
 ### IA3
 
+For **Qwen3**, PEFT’s IA³ mapping uses **`q_proj`, `v_proj`, `down_proj`** (with `feedforward_modules` including `down_proj`). Using **`k_proj`** instead (Llama-style) is a common mismatch and often hurts convergence on Qwen checkpoints.
+
 ```bash
 python train_peft_gsm8k.py \
   --adapter_type ia3 \
-  --ia3_target_modules k_proj,v_proj,down_proj \
+  --ia3_target_modules q_proj,v_proj,down_proj \
   --ia3_feedforward_modules down_proj
 ```
+
+**IA³ hyperparameters (vs LoRA):** trainable weights are tiny scaling vectors, so **strong weight decay (e.g. 0.01)** and **very low LR** can underfit. `./scripts/train/train_IA.sh` defaults to **3 epochs**, **`3e-5` LR**, **`weight_decay=0`**, **`warmup_steps=50`**. If eval loss still plateaus high, try **`5e-5`** or **`NUM_TRAIN_EPOCHS=4`**; if unstable, drop LR. For speed, **`MAX_LENGTH=2048`** (env + `EXTRA_ARGS='--max_length 2048'`) is often enough for GSM8K CoT. For eval, cap **`max_new_tokens`** (e.g. 512) to reduce rambling.
 
 ### Bottleneck Adapter (classic PEFT adapter)
 

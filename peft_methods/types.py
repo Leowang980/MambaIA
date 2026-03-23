@@ -35,9 +35,9 @@ class AdapterBuildConfig:
     # Prefix Tuning only
     prefix_projection: bool = False
 
-    # IA3
+    # IA3 (PEFT maps qwen2/qwen3 to q_proj,v_proj,down_proj — not k_proj like llama)
     ia3_target_modules: List[str] = field(
-        default_factory=lambda: ["k_proj", "v_proj", "down_proj"]
+        default_factory=lambda: ["q_proj", "v_proj", "down_proj"]
     )
     ia3_feedforward_modules: List[str] = field(default_factory=lambda: ["down_proj"])
 

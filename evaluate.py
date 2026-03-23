@@ -9,6 +9,7 @@ from datasets import load_dataset
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from peft_methods.adapter_utils import base_causal_lm_kwargs_for_peft_adapter
 from peft_methods.bottleneck_adapter import is_bottleneck_adapter_checkpoint, load_bottleneck_adapter
 
 
@@ -241,12 +242,15 @@ def ensure_tokenizer(model_name_or_path: str) -> AutoTokenizer:
     return tokenizer
 
 
-def load_model(model_name_or_path: str, device: torch.device) -> AutoModelForCausalLM:
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name_or_path,
-        torch_dtype="auto",
-        device_map=None,
-    )
+def load_model(
+    model_name_or_path: str,
+    device: torch.device,
+    from_pretrained_extra: Optional[Dict[str, object]] = None,
+) -> AutoModelForCausalLM:
+    kwargs: Dict[str, object] = {"torch_dtype": "auto", "device_map": None}
+    if from_pretrained_extra:
+        kwargs.update(from_pretrained_extra)
+    model = AutoModelForCausalLM.from_pretrained(model_name_or_path, **kwargs)
     return model.to(device)
 
 
@@ -255,7 +259,8 @@ def load_peft_model(
     adapter_path: str,
     device: torch.device,
 ) -> AutoModelForCausalLM:
-    base_for_adapter = load_model(base_model_name, device=device)
+    extra = base_causal_lm_kwargs_for_peft_adapter(adapter_path)
+    base_for_adapter = load_model(base_model_name, device=device, from_pretrained_extra=extra)
     if is_bottleneck_adapter_checkpoint(adapter_path):
         return load_bottleneck_adapter(base_for_adapter, adapter_path, device=device)
     peft_model = PeftModel.from_pretrained(base_for_adapter, adapter_path)

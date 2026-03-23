@@ -6,6 +6,7 @@ import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 
+from peft_methods.adapter_utils import base_causal_lm_kwargs_for_peft_adapter
 from peft_methods.bottleneck_adapter import is_bottleneck_adapter_checkpoint, load_bottleneck_adapter
 
 
@@ -89,10 +90,16 @@ def load_model_and_tokenizer(args: argparse.Namespace):
         tokenizer.pad_token = tokenizer.eos_token
 
     print(f"Loading model from: {model_path}")
+    extra_kw = (
+        base_causal_lm_kwargs_for_peft_adapter(args.adapter_path)
+        if args.model_type == "peft"
+        else {}
+    )
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype="auto",
         device_map=None,
+        **extra_kw,
     ).to(runtime_device)
 
     if args.model_type == "peft":

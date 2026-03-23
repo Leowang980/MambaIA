@@ -52,7 +52,7 @@ class ScriptArgs:
     prefix_projection: bool = False
 
     # IA3
-    ia3_target_modules: str = "k_proj,v_proj,down_proj"
+    ia3_target_modules: str = "q_proj,v_proj,down_proj"
     ia3_feedforward_modules: str = "down_proj"
 
     # Bottleneck Adapter (classic PEFT adapter, not LoRA)

@@ -1,3 +1,5 @@
+"""IA³ config builder. Target sets should follow PEFT `TRANSFORMERS_MODELS_TO_IA3_*_MAPPING` per model_type (qwen3: q,v,down)."""
+
 from peft import IA3Config, TaskType
 
 from .types import AdapterBuildConfig
